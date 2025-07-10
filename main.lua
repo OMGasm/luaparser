@@ -3,12 +3,12 @@
 function Main()
 	assert(arg[1])
 	local f = assert(io.open(arg[1]))
-	local tok = Nexttok(f)
+	local tok, lf = Nexttok(f)
 	while tok ~= nil do
 		local cl = TokClassifier(tok)
 		local o = TokColor(cl, tok)
-		print(o)
-		tok = Nexttok(f)
+		io.write(lf and '\n' or '', o, ' ')
+		tok, lf = Nexttok(f)
 	end
 end
 
@@ -24,9 +24,14 @@ end
 ---@param file file*
 function Nexttok(file)
 	local c
+	local lf = false
 	repeat
 		c = file:read(1)
-		if c == nil then return end
+		if c == nil then
+			return
+		elseif c == '\n' then
+			lf = true
+		end
 	until not whitespace(c)
 	local token = ''
 	repeat
@@ -34,7 +39,8 @@ function Nexttok(file)
 		c = file:read(1)
 		if c == nil then return end
 	until whitespace(c)
-	return token
+	file:seek("cur", -1)
+	return token, lf
 end
 
 function TokClassifier(tok)
