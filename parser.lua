@@ -10,6 +10,113 @@ local function whitespace(c)
 	end
 end
 
+local parser = {}
+mod.parser = parser
+
+local yield = coroutine.yield
+local function nop() end
+local function set(t)
+	return function(...)
+		for i = 1, select('#',...) do
+			t[i] = select(i, ...)
+		end
+	end
+end
+
+local function yieldwty(ty)
+	return function(...)
+		yield{type=ty, ...}
+	end
+end
+
+function parser:match(pat, commit)
+	local matches = { string.match(self.ctx.str, pat .. '()') }
+	local i = matches[#matches]
+	matches[#matches] = nil
+	if #matches > 0 then
+		commit(unpack(matches))
+		self.ctx.str = string.sub(self.ctx.str, i)
+		return true
+	end
+	return false
+end
+
+function parser:chunk()
+
+end
+function parser:block()
+	yield(self:chunk())
+end
+
+function parser:stat()
+
+end
+
+function parser:laststat()
+	if self:match('return', yieldwty'kw') then
+		self:explist()
+	elseif self:match('break', yieldwty'kw') then
+
+	end
+end
+
+function parser:funcname()
+	local ident1 = {}
+	if self:match('[%a_][%w_]*', set(ident1)) then
+		local ident2 = {}
+		if self:match('[:.][%a_][%w_]*', set(ident2)) then
+			local ident = ident1[1] .. ident2[1]
+			yield{type='ident', ident}
+		end
+	end
+end
+
+function parser:varlist() end
+
+function parser:explist() end
+
+function parser:exp() end
+
+function parser:prefixexp() end
+
+function parser:functioncall() end
+
+function parser:args() end
+
+function parser:func()
+	if self:match('function', yieldt1('kw')) then
+		yield{'function', 'kw'}
+		self:funcbody()
+	end
+end
+
+function parser:funcbody()
+	if string.match(self.ctx.str, '(') then
+
+	end
+end
+
+function parser:parlist() end
+
+function parser:tableconstructor() end
+
+function parser:fieldlist() end
+
+function parser:field() end
+
+function parser:fieldsep() end
+
+function parser:binop() end
+
+function parser:unop()
+	local ops = {'%-', 'not', '#'}
+	for _, v in ipairs(ops) do
+		if self:match(v, yieldwty'op') then
+			break
+		end
+	end
+end
+
 ---comment
 ---@param file file*
 function mod.Nexttok(file)
