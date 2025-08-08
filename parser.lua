@@ -32,19 +32,40 @@ local function set(t)
 	end
 end
 
+---return a function that when called, yields a table with the type `ty` filled in, and the remaining `...` as values
+---@param ty string 'type' of value being yielded
+---@return fun(...)
 local function yieldwty(ty)
-	return function(...)
-		yield{type=ty, ...}
+	return function(val)
+		yield{type=ty, val=val}
 	end
 end
 
-function parser:match(pat, commit)
-	local matches = { string.match(self.ctx.str, pat .. '()') }
+---match context string against a pattern, then if found, call `commit` with the match(es)
+---@param pat string
+---@param commit fun(...:string)
+---@return boolean
+function parser:pmatch(pat, commit)
+	local matches = { string.match(self.str, pat .. '()') }
 	local i = matches[#matches]
 	matches[#matches] = nil
 	if #matches > 0 then
 		commit(unpack(matches))
-		self.ctx.str = string.sub(self.ctx.str, i)
+		self.str = string.sub(self.str, i)
+		return true
+	end
+	return false
+end
+
+---match context string against a string, then if cound, call `commit` with the match
+---@param str string
+---@param commit fun(str:string)
+---@return boolean
+function parser:match(str, commit)
+	local sub = string.sub(self.str, 1, #str)
+	if sub == str then
+		commit(sub)
+		self.str = string.sub(self.str, #str + 1)
 		return true
 	end
 	return false
@@ -70,14 +91,16 @@ function parser:laststat()
 end
 
 function parser:funcname()
-	local ident1 = {}
-	if self:match('[%a_][%w_]*', set(ident1)) then
+	return coroutine.wrap(function()
+		local ident1 = {}
 		local ident2 = {}
-		if self:match('[:.][%a_][%w_]*', set(ident2)) then
-			local ident = ident1[1] .. ident2[1]
-			yield{type='ident', ident}
+		if not self:pmatch('([%a_][%w_]*)', set(ident1)) then return end
+		local ident = ident1[1]
+		if self:pmatch('([:.][%a_][%w_]*)', set(ident2)) then
+			ident =  ident .. ident2[1]
 		end
-	end
+		yield{type='ident', val=ident}
+	end)
 end
 
 function parser:varlist() end
@@ -93,16 +116,15 @@ function parser:functioncall() end
 function parser:args() end
 
 function parser:func()
-	if self:match('function', yieldt1('kw')) then
-		yield{'function', 'kw'}
+	if self:match('function', yieldwty'kw') then
 		self:funcbody()
 	end
 end
 
 function parser:funcbody()
-	if string.match(self.ctx.str, '(') then
+	if not self:match('(', yieldwty'call') then return end
 
-	end
+	if not self:match(')', yieldwty'call') then return end
 end
 
 function parser:parlist() end
@@ -120,7 +142,7 @@ function parser:binop() end
 function parser:unop()
 	local ops = {'%-', 'not', '#'}
 	for _, v in ipairs(ops) do
-		if self:match(v, yieldwty'op') then
+		if self:pmatch(v, yieldwty'op') then
 			break
 		end
 	end
