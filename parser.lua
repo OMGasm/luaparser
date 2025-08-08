@@ -71,9 +71,27 @@ function parser:match(str, commit)
 	return false
 end
 
+function parser:many(thing)
+	return coroutine.wrap(function()
+		local that = thing(self)
+		local tok = that()
+		while tok do
+			yield(tok)
+			tok = that()
+		end
+	end)
+end
+
+function parser:ident()
+	return coroutine.wrap(function()
+		self:pmatch('[%a_][%w_]*', yieldwty 'ident')
+	end)
+end
+
 function parser:chunk()
 
 end
+
 function parser:block()
 	yield(self:chunk())
 end
