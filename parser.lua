@@ -133,16 +133,25 @@ function parser:functioncall() end
 
 function parser:args() end
 
-function parser:func()
-	if self:match('function', yieldwty'kw') then
-		self:funcbody()
-	end
+function parser:anon_func()
+	return coroutine.wrap(function()
+		if self:match('function', yieldwty'kw') then
+			for tok in self:funcbody() do
+				yield(tok)
+			end
+		end
+	end)
 end
 
 function parser:funcbody()
-	if not self:match('(', yieldwty'call') then return end
-
-	if not self:match(')', yieldwty'call') then return end
+	return coroutine.wrap(function()
+		if not self:pmatch('%s*(%()', yieldwty'call') then return end
+		for x in self:many(self.ident) do
+			yield(x)
+		end
+		if not self:pmatch('%s*(%))', yieldwty'call') then return end
+		if not self:pmatch('%s*(end)', yieldwty 'kw') then return end
+	end)
 end
 
 function parser:parlist() end
