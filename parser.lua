@@ -11,6 +11,15 @@ local function whitespace(c)
 end
 
 local parser = {}
+parser._mt = { __index = parser }
+
+function parser.new(str)
+	local t = {
+		str=str,
+	}
+	return setmetatable(t, parser._mt)
+end
+
 mod.parser = parser
 
 local yield = coroutine.yield
