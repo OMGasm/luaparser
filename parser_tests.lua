@@ -62,8 +62,10 @@ local tests = testing.add_tests(function()
 		}
 		local i = 1
 		for token in p:anon_func() do
+			print('ex', expected[i].type, expected[i].val, 'got', token.type, token.val)
 			assert_eq(expected[i].type, token.type)
 			assert_eq(expected[i].val, token.val)
+			i = i + 1
 		end
 		assert_eq(5, i-1, 'token length')
 	end
